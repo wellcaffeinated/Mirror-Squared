@@ -19,6 +19,11 @@ define(
 
             groups: {},
 
+            globalAccel: {
+                x: 0,
+                y: 0.0005
+            },
+
             init: function(){
 
                 var self = this;
@@ -36,12 +41,121 @@ define(
                     self.layer.add(self.groups.obstacles);
                     self.stage.add(self.layer);
 
-                    self.addObstacles( 96 );
+                    self.initPhysics();
+
+                    self.addObstacles( 96, function(){
+
+                        self.addPlayer();
+                    });
 
                 });
             },
 
-            addObstacles: function( nObstacles ){
+            initPhysics: function(){
+
+                var self = this
+                    ,world
+                    ;
+
+                world = self.world = pQuery('world');
+
+                world
+                    .dimensions( this.bounds.width, this.bounds.height )
+                    .on('step', function(){
+
+                        self.updateViews();
+                        self.layer.draw();
+
+                    })
+                    // define some interactions
+                    .interact('beforeAccel', '.gravity', function( dt, obj ){
+
+                        // earth gravity
+                        obj.accelerate(self.globalAccel.x, self.globalAccel.y);
+
+                    })
+                    .interact( pQuery.interactions.ConstrainWithin( world, 0.3 ), '*' )
+                    ;
+
+                world.pause();
+
+                // subscribe to the timer
+                pQuery.ticker.subscribe(function(time, dt){
+
+                    world.step(time);
+
+                });
+
+                // set timestep size
+                world.timeStep( 16 );
+            },
+
+            addPlayer: function(){
+
+                var self = this
+                    ,x = self.bounds.width/2
+                    ,y = 10
+                    ,player = pQuery('<sphere>')
+                    ,obstacles = self.obstacles
+                    ,shape = new Kinetic.Circle({
+                        x: x,
+                        y: y,
+                        radius: 10,
+                        fill: 'grey',
+                        stroke: 'black',
+                        strokeWidth: 1
+                    })
+                    ;
+
+                
+                // collisions
+                player
+                    .data( 'view', shape )
+                    .dimensions( 10 )
+                    .position( x, y )
+                    .velocity( 0, 0 )
+                    .addClass('gravity player')
+                    .interact( 'afterInertia', function(){
+
+                        var obs
+                            ,pos1 = player.position()
+                            ,pos2 = pQuery.Vector()
+                            ,diff = pQuery.Vector()
+                            ,factor
+                            ,len
+                            ,r = player.dimensions().radius;
+                            ;
+
+                        for ( var i = 0, l = obstacles.length; i < l; ++i ){
+                            
+                            obs = obstacles[i];
+
+                            pos2.clone( obs.position() );
+                            
+                            diff.clone( pos2 );
+                            diff.vsub( pos1 );
+                            
+                            // sum of radii
+                            target = r + other.dimensions().radius;
+                            
+                            if ( diff.x < target && diff.y < target && (len = diff.norm()) < target ){ 
+
+                                factor = (len-target)/len;
+
+                                // move the spheres away from obstacle
+                                // by the conflicting length
+                                pos1.vadd(diff.mult(factor));
+                            }
+                        }
+
+                        player.position( pos1 );
+                    })
+                    .appendTo(self.world)
+                    ;
+
+            },
+
+            addObstacles: function( nObstacles, cb ){
 
                 var self = this
                     ,radius = 10
@@ -99,6 +213,7 @@ define(
                         }                       
 
                         self.layer.draw();
+                        cb && cb();
                     }
                 });
 
