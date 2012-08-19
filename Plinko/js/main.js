@@ -1,32 +1,29 @@
 require.config({
 
-	baseUrl: 'js/',
+    baseUrl: 'js/',
 
-	shim: {
-		'kinetic': {
-			exports: 'Kinetic'
-		}
-	},
+    shim: {
+        'libs/kinetic': {
+            exports: 'Kinetic'
+        }
+    },
 
-	paths: {
-		'kinetic': 'libs/kinetic'
-	},
-
-	map: {
-		'*': {
-			'pquery': 'libs/pquery/pquery'
-		}
-	}
+    map: {
+        '*': {
+            'pquery': 'libs/pquery/pquery',
+            'kinetic': 'libs/kinetic'
+        }
+    }
 });
 
 require(
-	[
-		'mediators/plinko'
-	],
-	function(
-		plinko
-	){
+    [
+        'mediators/plinko'
+    ],
+    function(
+        plinko
+    ){
 
-		plinko.init();
-	}
+        plinko.init();
+    }
 );

@@ -8,6 +8,7 @@
     name: 'almond',
     include: ['main'],
     out: '../main.min.js',
+    mainConfigFile: '../js/main.js',
     //optimize: 'none',
 
     paths: {

@@ -48,7 +48,7 @@ define(
                         self.addPlayer();
                         pQuery.ticker.start();
                         self.world.unpause();
-                        console.log(pQuery('sphere'))
+                        
                     });
 
                 });
