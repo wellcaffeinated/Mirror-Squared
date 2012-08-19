@@ -9,6 +9,27 @@ define(
         Kinetic,
         domready
     ){
+        pQuery = pQuery.sub();
+        pQuery.fn.extend({
+            updateView: function(){
+
+                return this.each(function(){
+
+                    // update the player canvas image
+                    var obj = pQuery('.player')
+                        ,img = obj.data('view')
+                        ,pos
+                        ;
+
+                    if (obj.attr('fixed') || !img) return;
+
+                    pos = obj.position();
+
+                    img.setX(pos.x);
+                    img.setY(pos.y);
+                });
+            }
+        });
        
         return {
 
@@ -48,7 +69,7 @@ define(
                         self.addPlayer();
                         pQuery.ticker.start();
                         self.world.unpause();
-                        
+
                     });
 
                 });
@@ -67,14 +88,7 @@ define(
                     .on('step', function(){
 
                         // update the player canvas image
-                        var player = pQuery('.player')
-                            ,img = player.data('view')
-                            ,pos = player.position()
-                            ;
-
-                        img.setX(pos.x);
-                        img.setY(pos.y);
-
+                        pQuery('.player').updateView();
                         self.layer.draw();
                     })
                     // define some interactions
@@ -106,6 +120,16 @@ define(
                 var self = this
                     ,x = self.bounds.width/2
                     ,y = 10
+                    ,t = 0
+                    ,minV = {
+                        x: -0.5,
+                        y: -0.5
+                    }
+                    ,maxV = {
+                        x: 0.5,
+                        y: 0.5
+                    }
+                    ,v = pQuery.Vector()
                     ,player = pQuery('<sphere>')
                     ,shape = new Kinetic.Circle({
                         x: x,
@@ -113,9 +137,45 @@ define(
                         radius: 10,
                         fill: 'grey',
                         stroke: 'black',
-                        strokeWidth: 1
+                        strokeWidth: 1,
+                        draggable: true
                     })
                     ;
+
+                // drag events
+                shape.on('mousedown touchstart', function(e){
+                    
+                    player
+                        .toggleClass('gravity collides')
+                        .attr('fixed', true)
+                        ;
+                });
+
+                shape.on('dragmove', function(e){
+
+                    x = e.x;
+                    y = e.y;
+                    t = e.timeStamp;
+
+                });
+
+                shape.on('dragend', function(e){
+                        
+                    // set the velocity from flick
+                    v.set((e.x - x)/(e.timeStamp - t), (e.y - y)/(e.timeStamp - t));
+                    // restrict it between min and max
+                    v.clamp(minV, maxV);
+
+                    player
+                        .attr('fixed', false)
+                        .position(e.x, e.y)
+                        .velocity(v)
+                        .toggleClass('gravity collides')
+                        ;
+                    
+                });
+
+                // add to group
 
                 self.groups.moving = new Kinetic.Group();
                 self.groups.moving.add(shape);
