@@ -11,7 +11,8 @@ require.config({
     map: {
         '*': {
             'pquery': 'libs/pquery/pquery',
-            'kinetic': 'libs/kinetic'
+            'kinetic': 'libs/kinetic',
+            'stapes': 'libs/stapes'
         }
     }
 });

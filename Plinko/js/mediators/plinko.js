@@ -2,11 +2,13 @@ define(
     [
         'pquery',
         'kinetic',
+        'util/device-orientation',
         'util/domready'
     ],
     function(
         pQuery,
         Kinetic,
+        orientation,
         domready
     ){
         pQuery = pQuery.sub();
@@ -50,7 +52,7 @@ define(
             groups: {},
 
             globalAccel: {
-                x: 0.0005,
+                x: 0.0002,
                 y: 0
             },
 
@@ -129,6 +131,12 @@ define(
 
                 // set timestep size
                 world.timeStep( 16 );
+
+                // modify global gravity based on orientation
+                orientation().init().on('change:orientation', function( data ){
+
+                    self.globalAccel.y = data.fb * 0.000005;
+                });
             },
 
             addPlayer: function( image ){
@@ -214,7 +222,6 @@ define(
                     if ( other === self.world[0] && v.x && v.y && this.position().x >= (self.bounds.height - this.dimensions().radius) ){
 
                         // stop the player
-                        console.log('ending')
                         this.velocity(0, 0);
                         self.endGame();
                     }
