@@ -13,20 +13,29 @@ define(
         pQuery.fn.extend({
             updateView: function(){
 
+                var vel = pQuery.Vector()
+                    ,ref = pQuery.Vector(1, 0)
+                    ;
+
                 return this.each(function(){
 
                     // update the player canvas image
                     var obj = pQuery('.player')
                         ,img = obj.data('view')
                         ,pos
+                        ,ang
                         ;
 
                     if (obj.attr('fixed') || !img) return;
 
                     pos = obj.position();
+                    vel.clone( obj.velocity() ).normalize();
+                    ang = ( vel.y > 0 ? 1 : -1 ) * Math.acos( vel.dot(ref) );
+                    //console.log(ang, vel.toString())
 
                     img.setX(pos.x);
                     img.setY(pos.y);
+                    img.setRotation( ang );
                 });
             }
         });
@@ -41,8 +50,8 @@ define(
             groups: {},
 
             globalAccel: {
-                x: 0,
-                y: 0.0005
+                x: 0.0005,
+                y: 0
             },
 
             init: function(){
@@ -64,11 +73,18 @@ define(
 
                     self.initPhysics();
 
-                    self.addObstacles( 96, function(){
+                    self.addObstacles(function(){
 
-                        self.addPlayer();
-                        pQuery.ticker.start();
-                        self.world.unpause();
+                        var playerImg = new Image();
+
+                        playerImg.onload = function(){
+
+                            self.addPlayer( playerImg );
+                            pQuery.ticker.start();
+                            self.world.unpause();
+                        };
+
+                        playerImg.src = document.getElementById('player-img').src;
 
                     });
 
@@ -115,11 +131,11 @@ define(
                 world.timeStep( 16 );
             },
 
-            addPlayer: function(){
+            addPlayer: function( image ){
 
                 var self = this
-                    ,x = self.bounds.width/2
-                    ,y = 10
+                    ,x = 10
+                    ,y = self.bounds.height/2
                     ,t = 0
                     ,minV = {
                         x: -0.5,
@@ -131,13 +147,13 @@ define(
                     }
                     ,v = pQuery.Vector()
                     ,player = pQuery('<sphere>')
-                    ,shape = new Kinetic.Circle({
+                    ,shape = new Kinetic.Image({
                         x: x,
                         y: y,
-                        radius: 10,
-                        fill: 'grey',
-                        stroke: 'black',
-                        strokeWidth: 1,
+                        width: 30,
+                        height: 30,
+                        offset: 15,
+                        image: image,
                         draggable: true
                     })
                     ;
@@ -186,17 +202,31 @@ define(
                     .data( 'view', shape )
                     .dimensions( 10 )
                     .position( x, y )
-                    .velocity( .01*Math.random(), 0 )
+                    .velocity( 0, .01*Math.random() )
                     .addClass('gravity player collides')
                     .appendTo(self.world)
                     ;
 
+                player.on('collide', function( other ){
+
+                    var v = this.velocity();
+
+                    if ( other === self.world[0] && v.x && v.y && this.position().x >= (self.bounds.height - this.dimensions().radius) ){
+
+                        // stop the player
+                        console.log('ending')
+                        this.velocity(0, 0);
+                        self.endGame();
+                    }
+                });
             },
 
-            addObstacles: function( nObstacles, cb ){
+            addObstacles: function( cb ){
 
                 var self = this
-                    ,radius = 10
+                    ,radius = 15
+                    ,nrows = 5
+                    ,startForest = 200
                     ;
 
                 // create obstacle shapes
@@ -221,17 +251,22 @@ define(
                         var image
                             ,x
                             ,y
-                            ,row
-                            ,dx = 50
-                            ,dy = 50
+                            ,row = 0
+                            ,dx = 60
+                            ,dy = 70
                             ;
 
-                        for ( var i = 0, l = nObstacles; i < l; ++i ){
+                        for ( var i = 0; (row = ~~( i * dx / self.bounds.height )) < nrows; ++i ){
 
-                            row = ~~( i * dx / self.bounds.width );
-                            x = ((row % 2) * dx/2 + (i * dx)) % self.bounds.width + dx/2;
-                            y = row * dy + 100;
                             
+                            y = ((row % 2) * dx/2 + (i * dx)) % self.bounds.height + dx/2;
+                            x = row * dy + startForest;
+
+                            y += 15 * (Math.random()-0.5);
+                            x += 24 * (Math.random()-0.5);
+
+                            if ( y + 2 * radius > self.bounds.height ) continue;
+
                             image = new Kinetic.Image({
                                 image: img,
                                 x: x,
@@ -257,6 +292,13 @@ define(
                 });
 
                 shape.hide();
+            },
+
+            endGame: function(){
+
+                var self = this;
+
+                self.world.pause();
             }
         };
     }
