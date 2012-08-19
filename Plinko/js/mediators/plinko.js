@@ -46,6 +46,9 @@ define(
                     self.addObstacles( 96, function(){
 
                         self.addPlayer();
+                        pQuery.ticker.start();
+                        self.world.unpause();
+                        console.log(pQuery('sphere'))
                     });
 
                 });
@@ -63,18 +66,26 @@ define(
                     .dimensions( this.bounds.width, this.bounds.height )
                     .on('step', function(){
 
-                        self.updateViews();
-                        self.layer.draw();
+                        // update the player canvas image
+                        var player = pQuery('.player')
+                            ,img = player.data('view')
+                            ,pos = player.position()
+                            ;
 
+                        img.setX(pos.x);
+                        img.setY(pos.y);
+
+                        self.layer.draw();
                     })
                     // define some interactions
+                    .interact( pQuery.interactions.SphereCollide( 0.3 ), '.collides' )
                     .interact('beforeAccel', '.gravity', function( dt, obj ){
 
                         // earth gravity
                         obj.accelerate(self.globalAccel.x, self.globalAccel.y);
 
                     })
-                    .interact( pQuery.interactions.ConstrainWithin( world, 0.3 ), '*' )
+                    .interact( pQuery.interactions.ConstrainWithin( world, 0.3 ), '.player' )
                     ;
 
                 world.pause();
@@ -96,7 +107,6 @@ define(
                     ,x = self.bounds.width/2
                     ,y = 10
                     ,player = pQuery('<sphere>')
-                    ,obstacles = self.obstacles
                     ,shape = new Kinetic.Circle({
                         x: x,
                         y: y,
@@ -107,49 +117,17 @@ define(
                     })
                     ;
 
+                self.groups.moving = new Kinetic.Group();
+                self.groups.moving.add(shape);
+                self.layer.add(self.groups.moving);
                 
                 // collisions
                 player
                     .data( 'view', shape )
                     .dimensions( 10 )
                     .position( x, y )
-                    .velocity( 0, 0 )
-                    .addClass('gravity player')
-                    .interact( 'afterInertia', function(){
-
-                        var obs
-                            ,pos1 = player.position()
-                            ,pos2 = pQuery.Vector()
-                            ,diff = pQuery.Vector()
-                            ,factor
-                            ,len
-                            ,r = player.dimensions().radius;
-                            ;
-
-                        for ( var i = 0, l = obstacles.length; i < l; ++i ){
-                            
-                            obs = obstacles[i];
-
-                            pos2.clone( obs.position() );
-                            
-                            diff.clone( pos2 );
-                            diff.vsub( pos1 );
-                            
-                            // sum of radii
-                            target = r + other.dimensions().radius;
-                            
-                            if ( diff.x < target && diff.y < target && (len = diff.norm()) < target ){ 
-
-                                factor = (len-target)/len;
-
-                                // move the spheres away from obstacle
-                                // by the conflicting length
-                                pos1.vadd(diff.mult(factor));
-                            }
-                        }
-
-                        player.position( pos1 );
-                    })
+                    .velocity( .01*Math.random(), 0 )
+                    .addClass('gravity player collides')
                     .appendTo(self.world)
                     ;
 
@@ -160,8 +138,6 @@ define(
                 var self = this
                     ,radius = 10
                     ;
-
-                self.obstacles = [];
 
                 // create obstacle shapes
                 var shape = new Kinetic.Circle({
@@ -203,11 +179,14 @@ define(
                                 offset: radius
                             });
 
-                            self.obstacles.push({
-                                x: x,
-                                y: y,
-                                img: image
-                            });
+                            self.world.append(
+                                pQuery('<sphere>')
+                                    .addClass('obstacle collides')
+                                    .position(x, y)
+                                    .dimensions( radius )
+                                    .data('view', image)
+                                    .attr('fixed', true)
+                            );
 
                             self.groups.obstacles.add(image);
                         }                       

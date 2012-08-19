@@ -9,8 +9,13 @@ require.config({
 	},
 
 	paths: {
-		'pquery': 'libs/pquery',
 		'kinetic': 'libs/kinetic'
+	},
+
+	map: {
+		'*': {
+			'pquery': 'libs/pquery/pquery'
+		}
 	}
 });
 
