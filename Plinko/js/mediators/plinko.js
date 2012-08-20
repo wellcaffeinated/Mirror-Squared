@@ -2,13 +2,13 @@ define(
     [
         'pquery',
         'kinetic',
-        'util/device-orientation',
+        //'util/device-orientation',
         'util/domready'
     ],
     function(
         pQuery,
         Kinetic,
-        orientation,
+        //orientation,
         domready
     ){
         pQuery = pQuery.sub();
@@ -135,10 +135,10 @@ define(
                 world.timeStep( 16 );
 
                 // modify global gravity based on orientation
-                orientation().init().on('change:orientation', function( data ){
+                // orientation().init().on('change:orientation', function( data ){
 
-                    self.globalAccel.y = data.fb * 0.000005;
-                });
+                //     self.globalAccel.y = data.fb * 0.000005;
+                // });
             },
 
             addWall: function(){
@@ -159,36 +159,36 @@ define(
 
                 self.layer.add(wall);
 
-                // keep player inside wall until class is removed
-                self.world.interact( pQuery.interactions.ConstrainWithin( insideWall, 0.3), '.in-wall' );
-
                 wall.on('mouseup.wall touchend.wall', function(e){
                     
                     wall.off('mouseup.wall touchend.wall');
 
+                    var debugText = new Kinetic.Text({
+                      x: 10,
+                      y: 10,
+                      stroke: '#555',
+                      strokeWidth: 5,
+                      padding: 20,
+                      fill: '#fff',
+                      text: 'DEBUG: \n (x,y): ('+e.x+','+e.y+')\n (clientX, clientY): ('+e.clientX+','+e.clientY+') \n (pageX, pageY): ('+e.pageX+','+e.pageY+')\n (layerX, layerY): ('+e.layerX+','+e.layerY+')',
+                      fontSize: 14,
+                      fontFamily: 'Calibri',
+                      textFill: '#555'
+                    });
+
+                    self.layer.add(debugText);
+
                     self.breakWallAnim(e.x, e.y, function( hole ){
 
                         var player = pQuery('.player')
-                            ,pos
-                            ,min = hole.getY() + 10
-                            ,max = min + hole.getRadius() - 20
                             ;
 
-                        function monitorHole(){
+                        player
+                            .position(e.x, e.y)
+                            .velocity(0, Math.random() * 0.001)
+                            ;
 
-                            pos = player.position();
-
-                            if ( pos.y > min && pos.y < max ){
-
-                                self.world.off('step', monitorHole);
-                                player
-                                    .removeClass('in-wall')
-                                    .velocity(player.velocity().x, 0)
-                                    ;
-                            }
-                        }
-
-                        self.world.on('step', monitorHole);
+                        player.data('view').show();
                     });
                 });
                     
@@ -222,43 +222,45 @@ define(
                     ;
 
                 // drag events
-                shape.on('mousedown touchstart', function(e){
+                // shape.on('mousedown touchstart', function(e){
                     
-                    player
-                        .toggleClass('gravity collides')
-                        .attr('fixed', true)
-                        ;
-                });
+                //     player
+                //         .toggleClass('gravity collides')
+                //         .attr('fixed', true)
+                //         ;
+                // });
 
-                shape.on('dragmove', function(e){
+                // shape.on('dragmove', function(e){
 
-                    x = e.x;
-                    y = e.y;
-                    t = e.timeStamp;
+                //     x = e.x;
+                //     y = e.y;
+                //     t = e.timeStamp;
 
-                });
+                // });
 
-                shape.on('dragend', function(e){
+                // shape.on('dragend', function(e){
                         
-                    // set the velocity from flick
-                    v.set((e.x - x)/(e.timeStamp - t), (e.y - y)/(e.timeStamp - t));
-                    // restrict it between min and max
-                    v.clamp(minV, maxV);
+                //     // set the velocity from flick
+                //     v.set((e.x - x)/(e.timeStamp - t), (e.y - y)/(e.timeStamp - t));
+                //     // restrict it between min and max
+                //     v.clamp(minV, maxV);
 
-                    player
-                        .attr('fixed', false)
-                        .position(e.x, e.y)
-                        .velocity(v)
-                        .toggleClass('gravity collides')
-                        ;
+                //     player
+                //         .attr('fixed', false)
+                //         .position(e.x, e.y)
+                //         .velocity(v)
+                //         .toggleClass('gravity collides')
+                //         ;
                     
-                });
+                // });
 
                 // add to group
 
                 self.groups.moving = new Kinetic.Group();
                 self.groups.moving.add(shape);
                 self.layer.add(self.groups.moving);
+
+                shape.hide();
                 
                 // collisions
                 player
@@ -266,7 +268,7 @@ define(
                     .dimensions( 10 )
                     .position( x, y )
                     .velocity( 0, .01*Math.random() )
-                    .addClass('gravity player collides in-wall')
+                    .addClass('gravity player collides')
                     .appendTo(self.world)
                     ;
 

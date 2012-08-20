@@ -9,7 +9,7 @@
 	<key>CFBundleDisplayName</key>
 	<string>Plinko By Jasper Palfree</string>
 	<key>CFBundleIdentifier</key>
-	<string>plinko.widget</string>
+	<string>com.mirrorsquared.plinko</string>
 	<key>CFBundleName</key>
 	<string>Plinko</string>
 	<key>CFBundleShortVersionString</key>
@@ -17,10 +17,10 @@
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>Height</key>
-	<string>600</string>
+	<string>700</string>
 	<key>MainHTML</key>
 	<string>index.html</string>
 	<key>Width</key>
-	<string>600</string>
+	<string>700</string>
 </dict>
 </plist>
