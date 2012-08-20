@@ -17,10 +17,10 @@
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
 	<key>Height</key>
-	<string>700</string>
+	<string>900</string>
 	<key>MainHTML</key>
 	<string>index.html</string>
 	<key>Width</key>
-	<string>700</string>
+	<string>500</string>
 </dict>
 </plist>

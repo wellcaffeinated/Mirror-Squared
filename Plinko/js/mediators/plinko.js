@@ -45,8 +45,8 @@ define(
         return {
 
             bounds: {
-                width: 700,
-                height: 700
+                width: 900,
+                height: 500
             },
 
             groups: {},
@@ -84,6 +84,10 @@ define(
                         playerImg.onload = function(){
 
                             self.addPlayer( playerImg );
+                            pQuery('.player')
+                                .attr('fixed', true)
+                                .data('view').hide()
+                                ;
                             pQuery.ticker.start();
                             self.world.unpause();
                         };
@@ -153,42 +157,31 @@ define(
                         y: 0,
                         width: 60,
                         height: self.bounds.height,
-                        alpha: 0
+                        alpha: 0,
+                        fill: 'white'
                     })
                     ;
 
                 self.layer.add(wall);
 
-                wall.on('mouseup.wall touchend.wall', function(e){
+                wall.on('click.wall tap.wall', function(e){
+
+                    var pos = self.stage.getUserPosition(e);
                     
-                    wall.off('mouseup.wall touchend.wall');
+                    wall.off('click.wall tap.wall');
 
-                    var debugText = new Kinetic.Text({
-                      x: 10,
-                      y: 10,
-                      stroke: '#555',
-                      strokeWidth: 5,
-                      padding: 20,
-                      fill: '#fff',
-                      text: 'DEBUG: \n (x,y): ('+e.x+','+e.y+')\n (clientX, clientY): ('+e.clientX+','+e.clientY+') \n (pageX, pageY): ('+e.pageX+','+e.pageY+')\n (layerX, layerY): ('+e.layerX+','+e.layerY+')',
-                      fontSize: 14,
-                      fontFamily: 'Calibri',
-                      textFill: '#555'
-                    });
-
-                    self.layer.add(debugText);
-
-                    self.breakWallAnim(e.x, e.y, function( hole ){
+                    self.breakWallAnim(pos.x, pos.y, function( hole ){
 
                         var player = pQuery('.player')
                             ;
 
                         player
-                            .position(e.x, e.y)
+                            .position(pos.x, pos.y)
+                            .attr('fixed', false)
                             .velocity(0, Math.random() * 0.001)
+                            .updateView()
+                            .data('view').show()
                             ;
-
-                        player.data('view').show();
                     });
                 });
                     
@@ -260,8 +253,6 @@ define(
                 self.groups.moving.add(shape);
                 self.layer.add(self.groups.moving);
 
-                shape.hide();
-                
                 // collisions
                 player
                     .data( 'view', shape )
