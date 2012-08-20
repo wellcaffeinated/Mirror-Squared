@@ -45,8 +45,8 @@ define(
         return {
 
             bounds: {
-                width: 600,
-                height: 600
+                width: 700,
+                height: 700
             },
 
             groups: {},
@@ -74,6 +74,8 @@ define(
                     self.stage.add(self.layer);
 
                     self.initPhysics();
+
+                    self.addWall();
 
                     self.addObstacles(function(){
 
@@ -107,7 +109,6 @@ define(
 
                         // update the player canvas image
                         pQuery('.player').updateView();
-                        self.layer.draw();
                     })
                     // define some interactions
                     .interact( pQuery.interactions.SphereCollide( 0.3 ), '.collides' )
@@ -126,6 +127,7 @@ define(
                 pQuery.ticker.subscribe(function(time, dt){
 
                     world.step(time);
+                    self.layer.draw();
 
                 });
 
@@ -137,6 +139,59 @@ define(
 
                     self.globalAccel.y = data.fb * 0.000005;
                 });
+            },
+
+            addWall: function(){
+
+                var self = this
+                    ,insideWall = {
+                        min: pQuery.Vector(0, 0),
+                        max: pQuery.Vector(60, self.bounds.height)
+                    }
+                    ,wall = new Kinetic.Rect({
+                        x: insideWall.max.x,
+                        y: 0,
+                        width: 60,
+                        height: self.bounds.height,
+                        alpha: 0
+                    })
+                    ;
+
+                self.layer.add(wall);
+
+                // keep player inside wall until class is removed
+                self.world.interact( pQuery.interactions.ConstrainWithin( insideWall, 0.3), '.in-wall' );
+
+                wall.on('mouseup.wall touchend.wall', function(e){
+                    
+                    wall.off('mouseup.wall touchend.wall');
+
+                    self.breakWallAnim(e.x, e.y, function( hole ){
+
+                        var player = pQuery('.player')
+                            ,pos
+                            ,min = hole.getY() + 10
+                            ,max = min + hole.getRadius() - 20
+                            ;
+
+                        function monitorHole(){
+
+                            pos = player.position();
+
+                            if ( pos.y > min && pos.y < max ){
+
+                                self.world.off('step', monitorHole);
+                                player
+                                    .removeClass('in-wall')
+                                    .velocity(player.velocity().x, 0)
+                                    ;
+                            }
+                        }
+
+                        self.world.on('step', monitorHole);
+                    });
+                });
+                    
             },
 
             addPlayer: function( image ){
@@ -211,7 +266,7 @@ define(
                     .dimensions( 10 )
                     .position( x, y )
                     .velocity( 0, .01*Math.random() )
-                    .addClass('gravity player collides')
+                    .addClass('gravity player collides in-wall')
                     .appendTo(self.world)
                     ;
 
@@ -219,7 +274,7 @@ define(
 
                     var v = this.velocity();
 
-                    if ( other === self.world[0] && v.x && v.y && this.position().x >= (self.bounds.height - this.dimensions().radius) ){
+                    if ( other === self.world[0] && v.x && this.position().x >= (self.bounds.width - this.dimensions().radius - 10) ){
 
                         // stop the player
                         this.velocity(0, 0);
@@ -233,7 +288,7 @@ define(
                 var self = this
                     ,radius = 15
                     ,nrows = 5
-                    ,startForest = 200
+                    ,startForest = 300
                     ;
 
                 // create obstacle shapes
@@ -299,6 +354,46 @@ define(
                 });
 
                 shape.hide();
+            },
+
+            breakWallAnim: function( x, y, cb ){
+
+                var self = this
+                    ,startT
+                    ,period = 2000 // ms
+                    ;
+
+                var blueHex = new Kinetic.RegularPolygon({
+                    x: x,
+                    y: y,
+                    sides: 6,
+                    radius: 30,
+                    fill: "#00D2FF",
+                    stroke: "black",
+                    strokeWidth: 1
+                });
+
+                self.layer.add(blueHex);
+
+                function anim( dt, time ){
+                    
+                    startT = startT || time;
+                
+                    var diff = (time - startT)
+                        ,scale = Math.sin(diff * 2 * Math.PI / period) + 0.001
+                        ;
+
+                    blueHex.setScale(scale);
+
+                    if (diff > period/4){
+
+                        self.world.off('step', anim);
+                        cb && cb( blueHex );
+                    }
+                }
+
+                self.world.on('step', anim);
+
             },
 
             endGame: function(){
