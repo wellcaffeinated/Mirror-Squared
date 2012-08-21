@@ -92,6 +92,10 @@ define(
                     self.groups.wall = new Kinetic.Group();
                     self.artifactLayer.add(self.groups.wall);
 
+                    self.groups.controls = new Kinetic.Group();
+                    self.artifactLayer.add(self.groups.controls);
+                    self.groups.controls.moveToTop();
+
                     self.groups.moving = new Kinetic.Group();
                     self.layer.add(self.groups.moving);
                     self.groups.moving.moveToBottom();
@@ -113,6 +117,8 @@ define(
                             .data('view').hide()
                             ;
 
+                        self.addControls();
+
                         self.stage.draw();
 
                         pQuery.ticker.start();
@@ -121,6 +127,28 @@ define(
                     });
 
                 });
+            },
+
+            restart: function(){
+
+                var self = this;
+
+                pQuery.each(self.groups.wall.getChildren(), function(i, child){
+                    child.setAlpha(1);
+                });
+
+                self.groups.wall.setListening(true);
+
+                pQuery('.player')
+                    .velocity(0.001, 0)
+                    .updateView()
+                    .attr('fixed', true)
+                    .data('view').hide();
+
+
+                self.artifactLayer.draw();
+
+                self.world.unpause();
             },
 
             initResources: function( cb ){
@@ -182,6 +210,7 @@ define(
                     })
                     // define some interactions
                     .interact( pQuery.interactions.SphereCollide( 0.3 ), '.collides' )
+                    .interact( pQuery.interactions.SphereCollide( 0.99 ), '.collides, .damped' )
                     .interact('beforeAccel', '.gravity', function( dt, obj ){
 
                         var pos = obj.position()
@@ -209,7 +238,7 @@ define(
                             }
                         }
 
-                        obj.accelerate( 0, closest.v.normalize().mult( 0.01 ).y );
+                        obj.accelerate( 0, closest.v.normalize().mult( 0.005 ).y );
                     })
                     .interact( pQuery.interactions.ConstrainWithin( world, 0.3 ), '.player' )
                     ;
@@ -232,6 +261,55 @@ define(
 
                 //     self.globalAccel.y = data.fb * 0.000005;
                 // });
+            },
+
+            addControls: function(){
+
+                var self = this
+                    ,restartBtn = new Kinetic.Text({
+                        x: self.bounds.width - 120,
+                        y: 15,
+                        stroke: '#555',
+                        strokeWidth: 1,
+                        fill: '#eea',
+                        alpha: 0.5,
+                        text: 'replay',
+                        fontSize: 14,
+                        fontFamily: 'Helvetica',
+                        textFill: '#222',
+                        width: 100,
+                        padding: 10,
+                        align: 'center',
+                        shadow: {
+                            color: 'black',
+                            blur: 10,
+                            offset: [1, 1],
+                            alpha: 0.4
+                        },
+                        cornerRadius: 6
+                    })
+                    ;
+
+                restartBtn.on('mousedown touchstart', function(e){
+                    
+                    restartBtn.setFill('#333');
+                    restartBtn.setTextFill('white');
+                    restartBtn.getLayer().draw();
+                });
+
+                restartBtn.on('mouseup touchend', function(e){
+                    
+                    restartBtn.setFill('#eea');
+                    restartBtn.setTextFill('#222');
+                    restartBtn.getLayer().draw();
+                });
+
+                restartBtn.on('click tap', function(){
+
+                    self.restart();
+                });
+
+                self.groups.controls.add(restartBtn);
             },
 
             addWall: function(){
@@ -445,6 +523,20 @@ define(
                     ,row = 0
                     ,dx = 70
                     ,dy = 80
+                    ,wid = self.bounds.width
+                    ,specificTrees = [
+                        pQuery.Vector(wid - 1 * radius, 360),
+                        pQuery.Vector(wid - 4 * radius, 360),
+                        pQuery.Vector(wid - 7 * radius, 340),
+                        pQuery.Vector(wid - 2 * radius, 310),
+                        pQuery.Vector(wid - 4.5 * radius, 313),
+
+                        pQuery.Vector(wid - 1 * radius, 190),
+                        pQuery.Vector(wid - 4 * radius, 190),
+                        pQuery.Vector(wid - 7 * radius, 170),
+                        pQuery.Vector(wid - 2 * radius, 140),
+                        pQuery.Vector(wid - 4.5 * radius, 143)
+                    ]
                     ;
 
                 for ( var i = 0; (row = ~~( i * dx / self.bounds.height )) < nrows; ++i ){
@@ -452,30 +544,30 @@ define(
                     y = ((row % 2) * dx/2 + (i * dx)) % self.bounds.height + dx/2;
                     x = row * dy + startForest;
 
-                    y += 15 * (Math.random()-0.5);
+                    y += 12 * (Math.random()-0.5);
                     x += 24 * (Math.random()-0.5);
 
                     if ( y + 2 * radius > self.bounds.height ) continue;
 
-                    image = new Kinetic.Image({
+                    self.addTree({
                         image: self.resources['tree-' + Math.ceil(4 * Math.random())],
                         x: x,
                         y: y,
                         offset: 45,
                         name: 'tree'
                     });
-
-                    self.world.append(
-                        pQuery('<sphere>')
-                            .addClass('obstacle collides')
-                            .position(x, y)
-                            .dimensions( radius )
-                            .data('view', image)
-                            .attr('fixed', true)
-                    );
-
-                    self.groups.obstacles.add(image);
                 }
+
+                pQuery.each( specificTrees, function( i, pos ){
+
+                    self.addTree({
+                        image: self.resources['tree-' + Math.ceil(4 * Math.random())],
+                        x: pos.x,
+                        y: pos.y,
+                        offset: 45,
+                        name: 'tree'
+                    }, true);
+                });
 
                 // flicker
                 pQuery('world').on('step', function(){
@@ -487,6 +579,27 @@ define(
                         trees[i].setAlpha( 0.2 * Math.random() + 0.8 );
                     }
                 });        
+            },
+
+            addTree: function( config, damped ){
+
+                var self = this
+                    ,image = new Kinetic.Image( config )
+                    ,radius = 20
+                    ;
+
+                self.world.append(
+                    pQuery('<sphere>')
+                        .addClass('obstacle')
+                        .toggleClass('collides', !damped)
+                        .toggleClass('damped', damped)
+                        .position(config.x, config.y)
+                        .dimensions( radius )
+                        .data('view', image)
+                        .attr('fixed', true)
+                );
+
+                self.groups.obstacles.add(image);
             },
 
             endGame: function(){
