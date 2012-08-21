@@ -14,5 +14,4 @@
     paths: {
         almond: 'libs/almond'
     }
-    
 })

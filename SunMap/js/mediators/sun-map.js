@@ -2,11 +2,13 @@ define(
     [
         'stapes',
         'google/maps',
+        'util/gm-label-marker',
         'util/domready'
     ],
     function(
         Stapes,
         gm,
+        MarkerWithLabel,
         domready
     ){
         'use strict';
@@ -174,6 +176,50 @@ define(
                     ,map = this.get('map')
                     ,markers
                     ;
+
+                function addMarker( opts ){
+                    // create the marker
+                    var m = new MarkerWithLabel({
+                        position: opts.position,
+                        title: opts.title,
+                        labelContent: opts.labelContent,
+
+                        //icon: icons.messier,
+                        //shape: {coords:[0,0,0], type:'circle'}, // so icons don't disturb map drag
+                        draggable: false,
+                        raiseOnDrag: false,
+                        labelAnchor: new gm.Point(50, 0),
+                        labelClass: 'sun-label'
+                    });
+
+                    // put marker on map
+                    m.setMap( map );
+
+                    gm.event.addListener(m, 'click', function( event ) {
+
+                        var infowindow = new gm.InfoWindow({
+
+                            content: '<p>Hello world</p>'
+                        });
+                        
+                        infowindow.open( map, m );
+
+                    });
+
+                    // so labels don't disturb map drag... this is a bit sketchy because
+                    // it's accessing something "private"... but meh.
+                    // gm.event.clearListeners(m.label.eventDiv_);
+
+                    // store marker
+                    self.set( 'marker.'+opts.title, m );
+                }
+
+                addMarker({
+
+                    position: new gm.LatLng(0, 0),
+                    title: 'test',
+                    labelContent: 'Just a Test'
+                });
                 
             }
         });

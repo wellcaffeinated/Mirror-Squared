@@ -426,11 +426,25 @@ td {
 /**
  * Main styles
  */
+body {
+    font: 100%/1.6 Helvetica, sans-serif;
+}
 
 #map-wrap {
     width: 900px;
     height: 500px;
     margin: auto;
+}
+
+#map-wrap .sun-label {
+    width: 100px;
+    text-align: center;
+    color: #333;
+    background: rgba(255, 255, 255, 0.6);
+
+    -moz-border-radius: 5px;
+    -webkit-border-radius: 5px;
+    border-radius: 5px;
 }
 
 
