@@ -2,13 +2,11 @@ define(
     [
         'pquery',
         'kinetic',
-        //'util/device-orientation',
         'util/domready'
     ],
     function(
         pQuery,
         Kinetic,
-        //orientation,
         domready
     ){
         pQuery = pQuery.sub();
@@ -45,8 +43,8 @@ define(
         return {
 
             bounds: {
-                width: 700,
-                height: 700
+                width: 900,
+                height: 500
             },
 
             groups: {},
@@ -54,6 +52,15 @@ define(
             globalAccel: {
                 x: 0.0002,
                 y: 0
+            },
+
+            resources: {
+                'player-img': null,
+                'wall': null,
+                'tree-1': null,
+                'tree-2': null,
+                'tree-3': null,
+                'tree-4': null
             },
 
             init: function(){
@@ -73,26 +80,51 @@ define(
                     self.layer.add(self.groups.obstacles);
                     self.stage.add(self.layer);
 
-                    self.initPhysics();
+                    self.initResources(function(){
 
-                    self.addWall();
+                        self.initPhysics();
 
-                    self.addObstacles(function(){
+                        self.addWall();
 
-                        var playerImg = new Image();
-
-                        playerImg.onload = function(){
-
-                            self.addPlayer( playerImg );
-                            pQuery.ticker.start();
-                            self.world.unpause();
-                        };
-
-                        playerImg.src = document.getElementById('player-img').src;
+                        self.addObstacles();
+                        self.addPlayer( self.resources['player-img'] );
+                        pQuery('.player')
+                            .attr('fixed', true)
+                            .data('view').hide()
+                            ;
+                        pQuery.ticker.start();
+                        self.world.unpause();
 
                     });
 
                 });
+            },
+
+            initResources: function( cb ){
+
+                var self = this
+                    ,toLoad = 1
+                    ;
+
+                pQuery.each( self.resources, function( id ){
+
+                    var img = new Image();
+                    toLoad++;
+                    img.onload = function(){
+
+                        toLoad--;
+                        self.resources[ id ] = this;
+
+                        if ( toLoad <= 0 && cb ){
+                            cb();
+                        }
+                    };
+
+                    img.src = document.getElementById( id ).src;
+                    
+                });
+
+                toLoad--;
             },
 
             initPhysics: function(){
@@ -148,47 +180,34 @@ define(
                         min: pQuery.Vector(0, 0),
                         max: pQuery.Vector(60, self.bounds.height)
                     }
-                    ,wall = new Kinetic.Rect({
+                    ,wall = new Kinetic.Image({
                         x: insideWall.max.x,
                         y: 0,
-                        width: 60,
-                        height: self.bounds.height,
-                        alpha: 0
+                        image: self.resources['wall'],
+                        offset: 80
                     })
                     ;
 
                 self.layer.add(wall);
 
-                wall.on('mouseup.wall touchend.wall', function(e){
+                wall.on('click.wall tap.wall', function(e){
+
+                    var pos = self.stage.getUserPosition(e);
                     
-                    wall.off('mouseup.wall touchend.wall');
+                    wall.off('click.wall tap.wall');
 
-                    var debugText = new Kinetic.Text({
-                      x: 10,
-                      y: 10,
-                      stroke: '#555',
-                      strokeWidth: 5,
-                      padding: 20,
-                      fill: '#fff',
-                      text: 'DEBUG: \n (x,y): ('+e.x+','+e.y+')\n (clientX, clientY): ('+e.clientX+','+e.clientY+') \n (pageX, pageY): ('+e.pageX+','+e.pageY+')\n (layerX, layerY): ('+e.layerX+','+e.layerY+')',
-                      fontSize: 14,
-                      fontFamily: 'Calibri',
-                      textFill: '#555'
-                    });
-
-                    self.layer.add(debugText);
-
-                    self.breakWallAnim(e.x, e.y, function( hole ){
+                    self.breakWallAnim(pos.x, pos.y, function( hole ){
 
                         var player = pQuery('.player')
                             ;
 
                         player
-                            .position(e.x, e.y)
+                            .position(pos.x, pos.y)
+                            .attr('fixed', false)
                             .velocity(0, Math.random() * 0.001)
+                            .updateView()
+                            .data('view').show()
                             ;
-
-                        player.data('view').show();
                     });
                 });
                     
@@ -213,11 +232,10 @@ define(
                     ,shape = new Kinetic.Image({
                         x: x,
                         y: y,
-                        width: 30,
-                        height: 30,
-                        offset: 15,
-                        image: image,
-                        draggable: true
+                        width: 40,
+                        height: 40,
+                        offset: 20,
+                        image: image
                     })
                     ;
 
@@ -259,9 +277,8 @@ define(
                 self.groups.moving = new Kinetic.Group();
                 self.groups.moving.add(shape);
                 self.layer.add(self.groups.moving);
+                self.groups.moving.moveToBottom();
 
-                shape.hide();
-                
                 // collisions
                 player
                     .data( 'view', shape )
@@ -285,77 +302,51 @@ define(
                 });
             },
 
-            addObstacles: function( cb ){
+            addObstacles: function(){
 
                 var self = this
-                    ,radius = 15
+                    ,radius = 20
                     ,nrows = 5
                     ,startForest = 300
+                    ,image
+                    ,x
+                    ,y
+                    ,row = 0
+                    ,dx = 70
+                    ,dy = 80
                     ;
 
-                // create obstacle shapes
-                var shape = new Kinetic.Circle({
-                    x: radius,
-                    y: radius,
-                    radius: radius-1,
-                    fill: 'red',
-                    stroke: 'black',
-                    strokeWidth: 2
-                });
+                for ( var i = 0; (row = ~~( i * dx / self.bounds.height )) < nrows; ++i ){
 
-                self.groups.obstacles.add(shape);
+                    y = ((row % 2) * dx/2 + (i * dx)) % self.bounds.height + dx/2;
+                    x = row * dy + startForest;
 
-                // cache them as images
-                shape.toImage({
-                    // define the size of the new image object
-                    width: 2*radius,
-                    height: 2*radius,
-                    callback: function(img) {
+                    y += 15 * (Math.random()-0.5);
+                    x += 24 * (Math.random()-0.5);
 
-                        var image
-                            ,x
-                            ,y
-                            ,row = 0
-                            ,dx = 60
-                            ,dy = 70
-                            ;
+                    if ( y + 2 * radius > self.bounds.height ) continue;
 
-                        for ( var i = 0; (row = ~~( i * dx / self.bounds.height )) < nrows; ++i ){
+                    image = new Kinetic.Image({
+                        image: self.resources['tree-' + Math.ceil(4 * Math.random())],
+                        x: x,
+                        y: y,
+                        offset: 45
+                    });
 
-                            
-                            y = ((row % 2) * dx/2 + (i * dx)) % self.bounds.height + dx/2;
-                            x = row * dy + startForest;
+                    self.world.append(
+                        pQuery('<sphere>')
+                            .addClass('obstacle collides')
+                            .position(x, y)
+                            .dimensions( radius )
+                            .data('view', image)
+                            .attr('fixed', true)
+                    );
 
-                            y += 15 * (Math.random()-0.5);
-                            x += 24 * (Math.random()-0.5);
+                    self.groups.obstacles.add(image);
+                }                       
 
-                            if ( y + 2 * radius > self.bounds.height ) continue;
-
-                            image = new Kinetic.Image({
-                                image: img,
-                                x: x,
-                                y: y,
-                                offset: radius
-                            });
-
-                            self.world.append(
-                                pQuery('<sphere>')
-                                    .addClass('obstacle collides')
-                                    .position(x, y)
-                                    .dimensions( radius )
-                                    .data('view', image)
-                                    .attr('fixed', true)
-                            );
-
-                            self.groups.obstacles.add(image);
-                        }                       
-
-                        self.layer.draw();
-                        cb && cb();
-                    }
-                });
-
-                shape.hide();
+                self.layer.draw();
+                        
             },
 
             breakWallAnim: function( x, y, cb ){
