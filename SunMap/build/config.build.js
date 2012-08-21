@@ -5,13 +5,18 @@
  */
 ({
 	baseUrl: '../js',
-    name: 'almond',
-    include: ['main'],
+    name: 'main',
+    //include: ['require'],
     out: '../main.min.js',
     mainConfigFile: '../js/main.js',
+
+    wrap: {
+        startFile: '../js/libs/require.js',
+        endFile: 'empty.txt'
+    },
     //optimize: 'none',
 
     paths: {
-        almond: 'libs/almond'
+        require: 'libs/require'
     }
 })
