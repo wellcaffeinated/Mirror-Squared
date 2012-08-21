@@ -56,11 +56,17 @@ define(
 
             resources: {
                 'player-img': null,
-                'wall': null,
+                
                 'tree-1': null,
                 'tree-2': null,
                 'tree-3': null,
-                'tree-4': null
+                'tree-4': null,
+
+                'wall-1': null,
+                'wall-2': null,
+                'wall-3': null,
+                'wall-4': null,
+                'wall-5': null,
             },
 
             init: function(){
@@ -176,42 +182,85 @@ define(
             addWall: function(){
 
                 var self = this
-                    ,insideWall = {
-                        min: pQuery.Vector(0, 0),
-                        max: pQuery.Vector(60, self.bounds.height)
-                    }
-                    ,wall = new Kinetic.Image({
-                        x: insideWall.max.x,
-                        y: 0,
-                        image: self.resources['wall'],
-                        offset: 80
-                    })
+                    ,wallPositions = [
+                        {
+                            pos: pQuery.Vector(19, 353),
+                            offset: 80
+                        },{
+                            pos: pQuery.Vector(10, 259),
+                            offset: 80
+                        },{
+                            pos: pQuery.Vector(2, 192),
+                            offset: 60
+                        },{
+                            pos: pQuery.Vector(2, 92),
+                            offset: 95
+                        },{
+                            pos: pQuery.Vector(0, -95),
+                            offset: 150
+                        }
+                    ]
+                    ,pos
+                    ,offset
+                    ,part
                     ;
 
-                self.layer.add(wall);
+                function tapWall(e){
 
-                wall.on('click.wall tap.wall', function(e){
+                    self.groups.wall.setListening(false);
 
-                    var pos = self.stage.getUserPosition(e);
-                    
-                    wall.off('click.wall tap.wall');
+                    var view = pQuery('.player').data('view');
+                    var start = pQuery('.player').dimensions().radius;
 
-                    self.breakWallAnim(pos.x, pos.y, function( hole ){
-
-                        var player = pQuery('.player')
-                            ;
-
-                        player
-                            .position(pos.x, pos.y)
-                            .attr('fixed', false)
-                            .velocity(0, Math.random() * 0.001)
-                            .updateView()
-                            .data('view').show()
-                            ;
+                    view.setX(start);
+                    view.setY(e.shape.getY());
+                    view.show();
+                    view.setAlpha(0);
+                    view.transitionTo({
+                        alpha: 1,
+                        duration: 0.6
                     });
-                });
-                    
+
+                    e.shape.transitionTo({
+                        alpha: 0,
+                        duration: 0.6,
+                        callback: function(){
+
+                            pQuery('.player')
+                                .position(start, e.shape.getY())
+                                .attr('fixed', false)
+                                .velocity(0.02, Math.random() * 0.001)
+                                .updateView()
+                                ;
+                        }
+                    });
+                }
+
+                self.groups.wall = new Kinetic.Group();
+                self.layer.add(self.groups.wall);
+
+                for ( var i = 5; i > 0; --i ){
+
+                    pos = wallPositions[ i - 1 ].pos;
+                    offset = wallPositions[ i - 1 ].offset;
+                    part = new Kinetic.Image({
+                        x: offset + pos.x,
+                        y: offset + pos.y,
+                        image: self.resources[ 'wall-' + i ],
+                        offset: offset,
+                        name: 'wall-'+i,
+                        detectionType: 'pixel'
+                    });
+
+                    self.groups.wall.add( part );
+
+                    part.saveImageData();
+
+                    part.on('click.wall tap.wall', tapWall);
+                }                    
             },
+
+
 
             addPlayer: function( image ){
 
@@ -347,46 +396,6 @@ define(
 
                 self.layer.draw();
                         
-            },
-
-            breakWallAnim: function( x, y, cb ){
-
-                var self = this
-                    ,startT
-                    ,period = 2000 // ms
-                    ;
-
-                var blueHex = new Kinetic.RegularPolygon({
-                    x: x,
-                    y: y,
-                    sides: 6,
-                    radius: 30,
-                    fill: "#00D2FF",
-                    stroke: "black",
-                    strokeWidth: 1
-                });
-
-                self.layer.add(blueHex);
-
-                function anim( dt, time ){
-                    
-                    startT = startT || time;
-                
-                    var diff = (time - startT)
-                        ,scale = Math.sin(diff * 2 * Math.PI / period) + 0.001
-                        ;
-
-                    blueHex.setScale(scale);
-
-                    if (diff > period/4){
-
-                        self.world.off('step', anim);
-                        cb && cb( blueHex );
-                    }
-                }
-
-                self.world.on('step', anim);
-
             },
 
             endGame: function(){
