@@ -56,6 +56,8 @@ define(
 
             resources: {
                 'player-img': null,
+
+                'ion': null,
                 
                 'tree-1': null,
                 'tree-2': null,
@@ -82,9 +84,21 @@ define(
                     });
 
                     self.layer = new Kinetic.Layer();
+                    self.artifactLayer = new Kinetic.Layer();
+
                     self.groups.obstacles = new Kinetic.Group();
                     self.layer.add(self.groups.obstacles);
+                    
+                    self.groups.wall = new Kinetic.Group();
+                    self.artifactLayer.add(self.groups.wall);
+
+                    self.groups.moving = new Kinetic.Group();
+                    self.layer.add(self.groups.moving);
+                    self.groups.moving.moveToBottom();
+
+                    self.stage.add(self.artifactLayer);
                     self.stage.add(self.layer);
+
 
                     self.initResources(function(){
 
@@ -98,6 +112,9 @@ define(
                             .attr('fixed', true)
                             .data('view').hide()
                             ;
+
+                        self.stage.draw();
+
                         pQuery.ticker.start();
                         self.world.unpause();
 
@@ -137,6 +154,21 @@ define(
 
                 var self = this
                     ,world
+                    ,v = pQuery.Vector()
+                    ,lensq
+                    ,g
+                    ,strength = 100
+                    ,magneticExits = [
+                        {
+                            pos: pQuery.Vector(self.bounds.width, 95)
+                        },
+                        {
+                            pos: pQuery.Vector(self.bounds.width, 250)
+                        },
+                        {
+                            pos: pQuery.Vector(self.bounds.width, 410)
+                        }
+                    ]
                     ;
 
                 world = self.world = pQuery('world');
@@ -152,9 +184,32 @@ define(
                     .interact( pQuery.interactions.SphereCollide( 0.3 ), '.collides' )
                     .interact('beforeAccel', '.gravity', function( dt, obj ){
 
+                        var pos = obj.position()
+                            ,closest
+                            ;
+
                         // earth gravity
                         obj.accelerate(self.globalAccel.x, self.globalAccel.y);
 
+                        if ( pos.x < 700 ) return;
+
+                        // magnetic field exits
+                        for ( var i = 0, l = magneticExits.length; i < l; ++i ){
+                            
+                            v.clone(magneticExits[i].pos);
+                            v.vsub(pos);
+
+                            lensq = v.normSq();
+
+                            if (!closest || closest.lensq > lensq){
+                                closest = {
+                                    lensq: lensq,
+                                    v: v.clone()
+                                };
+                            }
+                        }
+
+                        obj.accelerate( 0, closest.v.normalize().mult( 0.01 ).y );
                     })
                     .interact( pQuery.interactions.ConstrainWithin( world, 0.3 ), '.player' )
                     ;
@@ -185,19 +240,39 @@ define(
                     ,wallPositions = [
                         {
                             pos: pQuery.Vector(19, 353),
-                            offset: 80
+                            offset: 80,
+                            ion: {
+                                pos: pQuery.Vector(62, 388),
+                                offset: 0
+                            }
                         },{
                             pos: pQuery.Vector(10, 259),
-                            offset: 80
+                            offset: 80,
+                            ion: {
+                                pos: pQuery.Vector(68, 290),
+                                offset: 0
+                            }
                         },{
                             pos: pQuery.Vector(2, 192),
-                            offset: 60
+                            offset: 60,
+                            ion: {
+                                pos: pQuery.Vector(70, 212),
+                                offset: 0
+                            }
                         },{
                             pos: pQuery.Vector(2, 92),
-                            offset: 95
+                            offset: 95,
+                            ion: {
+                                pos: pQuery.Vector(70, 132),
+                                offset: 0
+                            }
                         },{
                             pos: pQuery.Vector(0, -95),
-                            offset: 150
+                            offset: 150,
+                            ion: {
+                                pos: pQuery.Vector(65, 30),
+                                offset: 0
+                            }
                         }
                     ]
                     ,pos
@@ -221,23 +296,22 @@ define(
                         duration: 0.6
                     });
 
-                    e.shape.transitionTo({
-                        alpha: 0,
-                        duration: 0.6,
-                        callback: function(){
+                    pQuery.each(self.groups.wall.get('.' + e.shape.getName()), function( i, obj ){
+                        obj.transitionTo({
+                            alpha: 0,
+                            duration: 0.6,
+                            callback: function(){
 
-                            pQuery('.player')
-                                .position(start, e.shape.getY())
-                                .attr('fixed', false)
-                                .velocity(0.02, Math.random() * 0.001)
-                                .updateView()
-                                ;
-                        }
+                                pQuery('.player')
+                                    .position(start, e.shape.getY())
+                                    .attr('fixed', false)
+                                    .velocity(0.02, Math.random() * 0.001)
+                                    .updateView()
+                                    ;
+                            }
+                        });
                     });
                 }
-
-                self.groups.wall = new Kinetic.Group();
-                self.layer.add(self.groups.wall);
 
                 for ( var i = 5; i > 0; --i ){
 
@@ -253,14 +327,25 @@ define(
                     });
 
                     self.groups.wall.add( part );
-
                     part.saveImageData();
+                    part.on('click.wall tap.wall', tapWall);
 
+                    // ion
+                    pos = wallPositions[ i - 1 ].ion.pos;
+                    offset = wallPositions[ i - 1 ].ion.offset;
+                    part = new Kinetic.Image({
+                        x: offset + pos.x,
+                        y: offset + pos.y,
+                        image: self.resources[ 'ion' ],
+                        offset: offset,
+                        name: 'wall-'+i,
+                        listening: false
+                    });
+
+                    self.groups.wall.add( part );
                     part.on('click.wall tap.wall', tapWall);
                 }                    
             },
-
-
 
             addPlayer: function( image ){
 
@@ -323,10 +408,7 @@ define(
 
                 // add to group
 
-                self.groups.moving = new Kinetic.Group();
                 self.groups.moving.add(shape);
-                self.layer.add(self.groups.moving);
-                self.groups.moving.moveToBottom();
 
                 // collisions
                 player
@@ -379,7 +461,8 @@ define(
                         image: self.resources['tree-' + Math.ceil(4 * Math.random())],
                         x: x,
                         y: y,
-                        offset: 45
+                        offset: 45,
+                        name: 'tree'
                     });
 
                     self.world.append(
@@ -392,10 +475,18 @@ define(
                     );
 
                     self.groups.obstacles.add(image);
-                }                       
+                }
 
-                self.layer.draw();
+                // flicker
+                pQuery('world').on('step', function(){
+
+                    var trees = self.groups.obstacles.get('.tree');
+
+                    for ( var i = 0, l = trees.length; i < l; ++i ){
                         
+                        trees[i].setAlpha( 0.2 * Math.random() + 0.8 );
+                    }
+                });        
             },
 
             endGame: function(){
