@@ -17,6 +17,18 @@ define(
             
         };
 
+        function attr(ele, attr) {
+            var result = (ele.getAttribute && ele.getAttribute(attr)) || null;
+            if( !result ) {
+                var attrs = ele.attributes;
+                var length = attrs.length;
+                for(var i = 0; i < length; i++)
+                    if(attrs[i].nodeName === attr)
+                        result = attrs[i].nodeValue;
+            }
+            return result;
+        }
+
         var SunMap = Stapes.create().extend({
 
             init: function(){
@@ -39,6 +51,8 @@ define(
                 domready(function(){
 
                     var el = document.getElementById( mapId );
+
+                    self.set('tileUrl', attr(el, 'data-tile-path'));
                     
                     // create map
                     self.set('mapOptions', mapOptions);
@@ -112,6 +126,7 @@ define(
                 var self = this
                     ,map = self.get('map')
                     ,mapOpts = self.get('mapOptions')
+                    ,baseUrl = self.get('tileUrl')
                     ;
 
                 // Normalizes the coords that tiles repeat across the x axis (horizontally)
@@ -146,15 +161,15 @@ define(
                     getTileUrl: function(coord, zoom) {
 
                         var normalizedCoord = getNormalizedCoord(coord, zoom)
-                            ,pfx = zoom > 1 ? 'detailed/' : 'plain/'
+                            ,pfx = zoom > 1 ? '/detailed/' : '/plain/'
                             ;
                         
                         if (!normalizedCoord) {
 
-                            return 'tiles/blank.jpg';
+                            return baseUrl + '/blank.jpg';
                         }
                         
-                        return 'tiles/'+ pfx + zoom + '/' + normalizedCoord.x + '/' + normalizedCoord.y + '.jpg';
+                        return baseUrl + pfx + zoom + '/' + normalizedCoord.x + '/' + normalizedCoord.y + '.jpg';
                     },
                     tileSize: new gm.Size(256, 256),
                     maxZoom: mapOpts.maxZoom,
