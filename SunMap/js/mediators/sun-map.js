@@ -25,8 +25,8 @@ define(
                     ,mapId = 'map-wrap'
                     ,mapOptions = {
                         center: new gm.LatLng(0, 0),
-                        zoom: 0,
-                        minZoom: 0,
+                        zoom: 2,
+                        minZoom: 1,
                         maxZoom: 4,
                         mapTypeControl: false,
                         streetViewControl: false
@@ -151,7 +151,7 @@ define(
                         
                         if (!normalizedCoord) {
 
-                            return null;
+                            return 'tiles/blank.jpg';
                         }
                         
                         return 'tiles/'+ pfx + zoom + '/' + normalizedCoord.x + '/' + normalizedCoord.y + '.jpg';
