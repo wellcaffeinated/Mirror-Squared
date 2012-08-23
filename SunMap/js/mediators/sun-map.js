@@ -242,7 +242,7 @@ define(
                             content: el.innerHTML
                         });
                         
-                        infowindow.open( map, m );
+                        infowindow.open( map, this );
 
                     });
                 });
