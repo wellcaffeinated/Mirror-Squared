@@ -189,10 +189,15 @@ define(
 
                 var self = this
                     ,map = this.get('map')
-                    ,markers
+                    ,markers = {
+                        'core': new gm.LatLng(0, 0),
+                        'radiative-zone': new gm.LatLng(0, 40),
+                        'convective-zone': new gm.LatLng(0, 80),
+                        'photosphere': new gm.LatLng(0, 130)
+                    }
                     ;
 
-                function addMarker( opts ){
+                function addMarker( opts, cb ){
                     // create the marker
                     var m = new MarkerWithLabel({
                         position: opts.position,
@@ -210,16 +215,7 @@ define(
                     // put marker on map
                     m.setMap( map );
 
-                    gm.event.addListener(m, 'click', function( event ) {
-
-                        var infowindow = new gm.InfoWindow({
-
-                            content: '<p>Hello world</p>'
-                        });
-                        
-                        infowindow.open( map, m );
-
-                    });
+                    gm.event.addListener(m, 'click', cb);
 
                     // so labels don't disturb map drag... this is a bit sketchy because
                     // it's accessing something "private"... but meh.
@@ -229,11 +225,26 @@ define(
                     self.set( 'marker.'+opts.title, m );
                 }
 
-                addMarker({
+                Stapes.util.each(markers, function( pos, id ){
 
-                    position: new gm.LatLng(0, 0),
-                    title: 'test',
-                    labelContent: 'Just a Test'
+                    var el = document.getElementById(id);
+                    var title = attr(el, 'data-title');
+                    
+                    addMarker({
+
+                        position: pos,
+                        title: title,
+                        labelContent: title 
+                    }, function( event ) {
+
+                        var infowindow = new gm.InfoWindow({
+
+                            content: el.innerHTML
+                        });
+                        
+                        infowindow.open( map, m );
+
+                    });
                 });
                 
             }
